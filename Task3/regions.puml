@@ -1,0 +1,44 @@
+@startuml Regional Infrastructure
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь")
+
+System(route53, "Global DNS", "Route 53")
+
+System_Boundary(sg, "Сингапур (ЮВА)") {
+    Container(waf_sg, "Региональный WAF", "AWS WAF")
+    Container(alb_sg, "Load Balancer", "AWS ALB")
+    System(app_sg, "Региональный кластер")
+}
+
+System_Boundary(sp, "Сан-Паулу (ЮА)") {
+    Container(waf_sp, "Региональный WAF", "AWS WAF")
+    Container(alb_sp, "Load Balancer", "AWS ALB")
+    System(app_sp, "Региональный кластер")
+}
+
+System_Boundary(nl, "Нидерланды (Европа)") {
+    Container(waf_nl, "Региональный WAF", "AWS WAF")
+    Container(alb_nl, "Load Balancer", "AWS ALB")
+    System(app_nl, "Региональный кластер")
+}
+
+Rel(user, route53, "Uses")
+
+Rel(route53, waf_sg, "Routes")
+Rel(waf_sg, alb_sg, "Routes")
+Rel(alb_sg, app_sg, "Routes")
+
+Rel(route53, waf_sp, "Routes")
+Rel(waf_sp, alb_sp, "Routes")
+Rel(alb_sp, app_sp, "Routes")
+
+Rel(route53, waf_nl, "Routes")
+Rel(waf_nl, alb_nl, "Routes")
+Rel(alb_nl, app_nl, "Routes")
+
+Rel(sp, nl, "Failover")
+Rel(sg, nl, "Failover")
+Rel(nl, sg, "Failover")
+
+@enduml
