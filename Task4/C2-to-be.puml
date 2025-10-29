@@ -1,0 +1,165 @@
+@startuml Container_Diagram_Full_Infrastructure
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(passenger, "Пассажир", "Заказывает поездки")
+Person(driver, "Водитель", "Принимает заказы и получает выплаты")
+Person(manager, "Корпоративный менеджер", "Управляет счетами")
+Person(accountant, "Бухгалтер", "Контролирует выплаты")
+
+System_Boundary(go_future_system, "GoFuture Platform") {
+    ' ### КЛИЕНТСКИЕ ПРИЛОЖЕНИЯ ###
+    Container(web_passenger, "Пассажирское приложение", "iOS/Android/Huawei", "Интерфейс для пассажиров")
+    Container(web_driver, "Водительское приложение", "iOS/Android/Huawei", "Интерфейс для водителей")
+    Container(web_portal, "Корпоративный веб-портал", "Web Application", "Управление заказами")
+    Container(admin_portal, "Админ-панель", "Web Application", "Управление выплатами")
+
+    Container(web_passenger_bff, "BFF пассажирского приложения")
+    Container(web_driver_bff, "BFF водительского приложения")
+    Container(web_portal_bff, "BFF корпоративного веб-портала")
+
+    ' ### Сервисы ###
+    
+    Container(booking_service, "Booking Service", "Django", "Управление бронированиями")
+    Container(driver_service, "Driver Service", "Django", "Управление водителями")
+    Container(pricing_service, "Pricing Service", "Django", "Ценообразование")
+    Container(payments_service, "Payments Service", "Django", "Платежи от пассажиров")
+    Container(payouts_service, "Payouts Service", "Django", "Выплаты водителям")
+    Container(notification_service, "Notification Service", "Django", "Управление уведомлениями")
+    Container(geography_service, "Geography Service", "Django", "Геопоиск и маршрутизация")
+    Container(analytics_service, "Analytics Service", "Django", "Сбор аналитики")
+    Container(fraud_service, "Fraud Service", "Django", "Обнаружение мошенничества")
+    
+    ' ### Базы данных сервисов ###
+
+    ContainerDb(booking_db, "Booking DB", "PostgreSQL")
+    ContainerDb(driver_db, "Driver DB", "PostgreSQL")
+    ContainerDb(pricing_db, "Pricing DB", "PostgreSQL")
+    ContainerDb(payments_db, "Payments DB", "PostgreSQL")
+    ContainerDb(payouts_db, "Payouts DB", "PostgreSQL")
+    ContainerDb(notification_db, "Notification DB", "PostgreSQL")
+    ContainerDb(geography_db, "Geography DB", "PostgreSQL")
+    ContainerDb(db_search, "Поисковый индекс", "Elasticsearch", "Геопоиск водителей")
+    ContainerDb(analytics_service_db, "Analytics DB", "PostgreSQL")
+    ContainerDb(fraud_db, "Fraud DB", "PostgreSQL")
+
+    ' ### ОЧЕРЕДИ И ВОРКЕРЫ ###
+    ContainerQueue(kafka_broker, "Поток событий", "Kafka")
+
+    ' ### АНАЛИТИЧЕСКАЯ ИНФРАСТРУКТУРА ###
+    Container(analytics_engine, "Analytics Engine", "Spark/Flink", "Обработка аналитических данных")
+    Container(analytics_db, "Analytics DB", "ClickHouse", "Хранение аналитических данных")
+    Container(datalens, "DataLens", "BI Tool", "Визуализация бизнес-метрик")
+
+    ' ### ML Stack
+    Container(ml_service, "ML Service", "Python", "Инференс и обучение моделей")
+
+    ' ### МЕТРИКИ, ЛОГИ, ТРЕЙСИНГ
+    Container(otel_collector, "OTel Collector", "", "Агрегатор метрик, логов и трейсов")
+    Container(monitoring, "Prometheus", "Monitoring", "Сбор метрик")
+    Container(grafana, "Grafana", "Dashboard", "Визуализация метрик")
+    Container(loki, "Loki", "Log Aggregation", "Сбор логов")
+    Container(tempo, "Tempo", "Trace Aggregation", "Сбор трейсов")
+    Container(alert_manager, "Alertmanager", "Alert System", "Управление алертами")
+}
+
+' ### ВНЕШНИЕ СИСТЕМЫ ###
+System_Ext(yandex_pay, "Яндекс.Пэй", "Платежный шлюз")
+System_Ext(yandex_maps, "Яндекс.Карты", "Картографический сервис")
+System_Ext(fcm, "FCM", "Push-сервис Google")
+System_Ext(apns, "APNs", "Push-сервис Apple")
+System_Ext(huawei_push, "Huawei Push Kit", "Push-сервис Huawei")
+System_Ext(bank_api, "API Банка", "Банковские выплаты")
+
+Rel(passenger, web_passenger, "Использует")
+Rel(driver, web_driver, "Использует")
+Rel(manager, web_portal, "Использует")
+Rel(accountant, admin_portal, "Использует")
+
+Rel(web_passenger, web_passenger_bff, "HTTP/REST API")
+Rel(web_driver, web_driver_bff, "HTTP/REST API")
+Rel(web_portal, web_portal_bff, "HTTP/REST API")
+Rel(admin_portal, payouts_service, "HTTP/REST API")
+
+Rel(web_passenger_bff, booking_service, "HTTP/REST")
+Rel(web_passenger_bff, notification_service, "HTTP/REST")
+Rel(web_passenger_bff, geography_service, "HTTP/REST")
+Rel(web_passenger_bff, payments_service, "HTTP/REST")
+Rel(web_passenger_bff, pricing_service, "HTTP/REST")
+
+Rel(web_driver_bff, driver_service, "HTTP/REST")
+Rel(web_driver_bff, notification_service, "HTTP/REST")
+Rel(web_driver_bff, geography_service, "HTTP/REST")
+Rel(web_driver_bff, payouts_service, "HTTP/REST")
+Rel(web_driver_bff, pricing_service, "HTTP/REST")
+
+Rel(web_portal_bff, notification_service, "HTTP/REST")
+Rel(web_portal_bff, analytics_service, "HTTP/REST")
+Rel(web_portal_bff, fraud_service, "HTTP/REST")
+
+Rel(booking_service, booking_db, "Чтение и запись данных", "SQL")
+Rel(driver_service, driver_db, "Чтение и запись данных", "SQL")
+Rel(pricing_service, pricing_db, "Чтение и запись данных", "SQL")
+Rel(payments_service, payments_db, "Чтение и запись данных", "SQL")
+Rel(notification_service, notification_db, "Чтение и запись данных", "SQL")
+Rel(geography_service, geography_db, "Чтение и запись данных", "SQL")
+Rel(geography_service, db_search, "Чтение и запись данных", "Elasticsearch API")
+Rel(analytics_service, analytics_service_db, "Чтение и запись данных", "SQL")
+Rel(fraud_service, fraud_db, "Чтение и запись данных", "SQL")
+Rel(payouts_service, payouts_db, "Чтение и запись данных", "SQL")
+
+Rel(booking_service, payments_service, "Инициация платежа", "HTTP")
+
+Rel(booking_service, kafka_broker, "События заказов", "Kafka Protocol")
+Rel(driver_service, kafka_broker, "События обновления статусов водителей", "Kafka Protocol")
+Rel(pricing_service, kafka_broker, "События изменения цен", "Kafka Protocol")
+Rel(payments_service, kafka_broker, "События оплаты", "Kafka Protocol")
+Rel(geography_service, kafka_broker, "Трансляция геометок", "Kafka Protocol")
+Rel(payouts_service, kafka_broker, "События выплат", "Kafka Protocol")
+
+Rel(kafka_broker, booking_service, "Данные о времени поиска, цене и пр.", "Kafka Protocol")
+Rel(kafka_broker, driver_service, "Данные цене, местоположения пользователей и пр.", "Kafka Protocol")
+Rel(kafka_broker, fraud_service, "Данные о заказах", "Kafka Protocol")
+Rel(kafka_broker, notification_service, "События, требующие уведомлений", "Kafka Protocol")
+Rel(kafka_broker, analytics_service, "События заказов", "Kafka Protocol")
+
+Rel(payments_service, yandex_pay, "Обработка платежей")
+Rel(geography_service, yandex_maps, "Запросы геоданных")
+Rel(payouts_service, bank_api, "Инициирование выплат")
+
+Rel(notification_service, fcm, "уведомления Android", "REST API")
+Rel(notification_service, apns, "уведомления iOS", "REST API")
+Rel(notification_service, huawei_push, "уведомления Huawei", "REST API")
+
+Rel(analytics_service, kafka_broker, "Публикует данные о событиях", "Kafka Protocol")
+Rel(kafka_broker, analytics_engine, "Получает события", "Kafka Protocol")
+Rel(analytics_engine, analytics_db, "Записывает данные", "ETL Process")
+Rel(analytics_db, ml_service, "Получает данные для обучения")
+Rel(analytics_db,datalens, "Предоставляет данные", "SQL Queries")
+Rel(datalens, manager, "Бизнес-отчеты", "Dashboards")
+Rel(datalens, accountant, "Финансовые отчеты", "Dashboards")
+
+Rel(pricing_service, ml_service, "Ценообразование с помощью модели", "HTTP/REST")
+Rel(fraud_service, ml_service, "Фрод-детекшн с помощью модели", "HTTP/REST")
+
+Rel(booking_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(driver_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(pricing_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(payments_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(notification_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(geography_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(analytics_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(fraud_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(payouts_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+
+Rel(kafka_broker, monitoring, "метрики очередей", "Kafka Exporter")
+
+Rel(otel_collector, monitoring, "Метрики")
+Rel(otel_collector, loki, "Логи")
+Rel(otel_collector, tempo, "Трейсы")
+
+Rel(monitoring, grafana, "данные для дашбордов", "PromQL")
+Rel(loki, grafana, "данные для дашбордов", "LogQL")
+Rel(tempo, grafana, "данные для дашбордов", "TraceQL")
+Rel(monitoring, alert_manager, "алерты", "Alert Rules")
+
+@enduml
