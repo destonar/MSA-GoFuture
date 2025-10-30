@@ -1,0 +1,67 @@
+@startuml Container_Diagram_Full_Infrastructure
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+System_Boundary(go_future_system, "GoFuture Platform") {
+    Container(keycloak_hub, "Hub Realm", "KeyCloak")
+
+    Container(notification_service, "Notification Service", "Django", "Управление уведомлениями")
+    Container(geography_service, "Geography Service", "Django", "Геопоиск и маршрутизация")
+    Container(analytics_service, "Analytics Service", "Django", "Сбор аналитики")
+    Container(pricing_service, "Pricing Service", "Django", "Ценообразование")
+
+    Container(otel_collector, "OTel Collector", "", "Агрегатор метрик, логов и трейсов")
+    Container(monitoring, "Prometheus", "Monitoring", "Сбор метрик")
+    Container(grafana, "Grafana", "Dashboard", "Визуализация метрик")
+    Container(loki, "Loki", "Log Aggregation", "Сбор логов")
+    Container(tempo, "Tempo", "Trace Aggregation", "Сбор трейсов")
+    Container(alert_manager, "Alertmanager", "Alert System", "Управление алертами")
+}
+
+System_Boundary(partner_1, "GoFuture Partner"){
+    Container(keycloak_partner_1, "Partner Realm", "KeyCloak")
+    Container(booking_service_1, "Booking Service", "Django", "Управление бронированиями")
+    Container(driver_service_1, "Driver Service", "Django", "Управление водителями")
+    Container(payments_service_1, "Payments Service", "Django", "Платежи от пассажиров")
+    Container(payouts_service_1, "Payouts Service", "Django", "Выплаты водителям")
+    Container(fraud_service_1, "Fraud Service", "Django", "Обнаружение мошенничества")
+
+    Container(analytics_db_1, "Analytics DB", "ClickHouse", "Хранение аналитических данных")
+}
+
+System_Boundary(partner_2, "GoFuture Partner"){
+    Container(keycloak_partner_2, "Partner Realm", "KeyCloak")
+    Container(booking_service_2, "Booking Service", "Django", "Управление бронированиями")
+    Container(driver_service_2, "Driver Service", "Django", "Управление водителями")
+    Container(payments_service_2, "Payments Service", "Django", "Платежи от пассажиров")
+    Container(payouts_service_2, "Payouts Service", "Django", "Выплаты водителям")
+    Container(fraud_service_2, "Fraud Service", "Django", "Обнаружение мошенничества")
+
+    Container(analytics_db_2, "Analytics DB", "ClickHouse", "Хранение аналитических данных")
+}
+
+Rel(go_future_system, partner_1, "Управляет")
+Rel(go_future_system, partner_2, "Управляет")
+
+Rel(partner_1, otel_collector, "Метрики, логи и трейсы", "OTLP")
+
+Rel(keycloak_hub, keycloak_partner_1, "Brokers")
+Rel(keycloak_hub, keycloak_partner_2, "Brokers")
+
+Rel(partner_2, otel_collector, "Метрики, логи и трейсы", "OTLP")
+
+Rel(pricing_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(notification_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+Rel(geography_service, otel_collector, "Метрики, логи и трейсы", "OTLP")
+
+Rel(otel_collector, monitoring, "Метрики")
+Rel(otel_collector, loki, "Логи")
+Rel(otel_collector, tempo, "Трейсы")
+
+Rel(monitoring, grafana, "данные для дашбордов", "PromQL")
+Rel(loki, grafana, "данные для дашбордов", "LogQL")
+Rel(tempo, grafana, "данные для дашбордов", "TraceQL")
+Rel(monitoring, alert_manager, "алерты", "Alert Rules")
+
+LAYOUT_LANDSCAPE()
+
+@enduml
